@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.package-lock.json
 
 # Build output
 dist/
@@ -31,3 +32,11 @@ coverage/
 
 # Lock files (pick one, keep the other)
 yarn.lock
+
+# docs
+
+docs/
+openspec
+
+# Generated files
+uploads/

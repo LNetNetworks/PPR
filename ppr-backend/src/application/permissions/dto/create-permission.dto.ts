@@ -1,16 +1,19 @@
-import { IsNotEmpty, IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreatePermissionDto {
   @ApiProperty({
-    description: 'Permission name',
-    example: 'List of evidences',
+    description: "Permission name",
+    example: "List of evidences",
   })
-  @IsString() @IsNotEmpty() name: string;
-  
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
   @ApiProperty({
-    description: 'Description of the permission',
-    example: 'Access to the list of evidence',
+    description: "Description of the permission",
+    example: "Access to the list of evidence",
   })
-  @IsString() description: string;
+  @IsString()
+  description: string;
 }

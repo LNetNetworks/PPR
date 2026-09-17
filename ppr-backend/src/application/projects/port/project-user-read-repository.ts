@@ -1,5 +1,9 @@
-import { ProjectUserView } from '../dto/project-user.view';
+import { ProjectUserView } from "../dto/project-user.view";
 
 export abstract class ProjectUserReadRepository {
-  abstract findAll(params: { limit?: number; offset?: number; projectId?: string }): Promise<ProjectUserView[]>;
+  abstract findAll(params: {
+    limit?: number;
+    offset?: number;
+    projectId?: string;
+  }): Promise<ProjectUserView[]>;
 }

@@ -1,17 +1,20 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, IsNumber, Min } from 'class-validator';
-import { UserRole} from '../../../domain/users/user-role.enum';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsOptional, IsString } from "class-validator";
+import { UserRole } from "../../../domain/users/user-role.enum";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateOrganizationUserDto {
   @ApiProperty({
-    description: 'Id User',
-    example: 'usr_001',
+    description: "Id User",
+    example: "usr_001",
   })
-  @IsString() id_user: string;
+  @IsString()
+  id_user: string;
   @ApiProperty({
-    description: 'User role',
-    example: 'verifier',
-    enum: ['verifier', 'user', 'sponsor','provider','superadmin'],
+    description: "User role",
+    example: "verifier",
+    enum: ["verifier", "user", "sponsor", "provider", "superadmin"],
   })
-  @IsOptional() @IsEnum(UserRole) role: UserRole;
+  @IsOptional()
+  @IsEnum(UserRole)
+  role: UserRole;
 }

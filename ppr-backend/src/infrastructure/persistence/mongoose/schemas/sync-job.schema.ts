@@ -1,11 +1,10 @@
-// sync-job.schema.ts
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document } from "mongoose";
 
 export type SyncJobDocument = SyncJob & Document;
-export type SyncJobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
+export type SyncJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 
-@Schema({ timestamps: true, collection: 'sync_jobs' })
+@Schema({ timestamps: true, collection: "sync_jobs" })
 export class SyncJob {
   @Prop({ required: true, unique: true })
   jobId!: string;
@@ -13,7 +12,7 @@ export class SyncJob {
   @Prop({ required: true })
   requestedBy!: string;
 
-  @Prop({ required: true, default: 'PENDING' })
+  @Prop({ required: true, default: "PENDING" })
   status!: SyncJobStatus;
 
   @Prop({

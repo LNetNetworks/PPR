@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { GcpUploadClient } from './gcp-upload.client';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { GcpUploadClient } from "./gcp-upload.client";
 
 @Module({
-  imports: [ConfigModule],       
+  imports: [ConfigModule],
   providers: [GcpUploadClient],
-  exports: [GcpUploadClient],     
+  exports: [GcpUploadClient],
 })
 export class StorageModule {}

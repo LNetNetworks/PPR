@@ -1,9 +1,11 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { ProjectStatus } from '../../../../domain/projects/project-status.enum';
-import { Organization } from './organization.schema';
-import { ProjectTypes} from '../../../../domain/projects/project-types.enum';
-import { ProjectPaises } from '../../../../domain/projects/project-paises.enum';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
+import { ProjectStatus } from "../../../../domain/projects/project-status.enum";
+import { Organization } from "./organization.schema";
+import { ProjectTypes } from "../../../../domain/projects/project-types.enum";
+import { ProjectPaises } from "../../../../domain/projects/project-paises.enum";
+import { AssetTokenSymbol } from "../../../../domain/projects/project-asset-token.enum";
+import { TypeCurrency } from "../../../../domain/projects/project-type-currency.enum";
 
 @Schema({ timestamps: true })
 export class Project extends Document {
@@ -24,15 +26,15 @@ export class Project extends Document {
 
   @Prop({ type: Types.ObjectId, ref: Organization.name })
   organization?: Types.ObjectId;
-  
+
   @Prop({ enum: Object.values(ProjectPaises), default: ProjectPaises.REGIONAL })
   country_region: ProjectPaises;
 
   @Prop({ enum: Object.values(ProjectStatus), default: ProjectStatus.PENDING })
   status: ProjectStatus;
 
-  @Prop()
-  date_end?: Date;
+  @Prop({ required: true })
+  date_end: Date;
 
   @Prop()
   description?: string;
@@ -49,7 +51,11 @@ export class Project extends Document {
   @Prop()
   wallet_index_token?: string;
 
-
-
+  @Prop({
+    enum: Object.values(AssetTokenSymbol),
+    default: AssetTokenSymbol.USDC,
+  })
+  asset_token: AssetTokenSymbol;
+  type_currency: TypeCurrency;
 }
 export const ProjectSchema = SchemaFactory.createForClass(Project);

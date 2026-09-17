@@ -6,6 +6,6 @@ export class Revision {
     public observation: string,
     public date_revision: Date,
     public id_phase_project: string,
-    public status:string,
+    public status: string,
   ) {}
 }

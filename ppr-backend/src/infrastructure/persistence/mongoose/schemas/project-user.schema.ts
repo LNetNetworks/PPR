@@ -1,8 +1,7 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { Project } from './project.schema';
-import { User } from './user.schema'; 
-import { UserRole } from '../../../../domain/users/user-role.enum';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
+import { Project } from "./project.schema";
+import { User } from "./user.schema";
 
 @Schema({ timestamps: true })
 export class ProjectUser extends Document {
@@ -20,6 +19,5 @@ export class ProjectUser extends Document {
 
   @Prop({ type: Types.ObjectId, ref: User.name })
   user: Types.ObjectId;
-  
 }
 export const ProjectUserSchema = SchemaFactory.createForClass(ProjectUser);

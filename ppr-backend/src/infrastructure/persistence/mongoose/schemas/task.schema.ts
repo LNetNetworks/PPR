@@ -1,6 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-import { TypeEvidenceName, EvidenceMode } from '../../../../domain/evidences/type-evidence.enum';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Task extends Document {

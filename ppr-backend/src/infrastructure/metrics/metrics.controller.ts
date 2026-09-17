@@ -1,10 +1,10 @@
-import { Controller, Get, Res, UseGuards } from '@nestjs/common';
-import { PrometheusController } from '@willsoto/nestjs-prometheus';
-import { Public } from 'nest-keycloak-connect';
-import type { Response } from 'express';
-import { MetricsTokenGuard } from './metrics-token.guard';
+import { Controller, Get, Res, UseGuards } from "@nestjs/common";
+import { PrometheusController } from "@willsoto/nestjs-prometheus";
+import { Public } from "nest-keycloak-connect";
+import type { Response } from "express";
+import { MetricsTokenGuard } from "./metrics-token.guard";
 
-@Controller('metrics')
+@Controller("metrics")
 export class MetricsController extends PrometheusController {
   @Public()
   @UseGuards(MetricsTokenGuard)

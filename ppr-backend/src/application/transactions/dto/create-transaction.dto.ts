@@ -1,48 +1,60 @@
-import { IsDateString, IsString, IsNumber, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { TransactionTypes } from '../../../domain/transactions/transaction-types.enum';
+import { IsDateString, IsString } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { TransactionTypes } from "../../../domain/transactions/transaction-types.enum";
 
 export class CreateTransactionDto {
   @ApiProperty({
     description: "Project Id associated with the transaction",
-    example: 'prj-001',
+    example: "prj-001",
   })
-  @IsString() id_project: string;
+  @IsString()
+  id_project: string;
   @ApiProperty({
     description: "User Id who initiated the transaction",
-    example: 'usr-001',
+    example: "usr-001",
   })
-  @IsString() id_user: string;
+  @IsString()
+  id_user: string;
   @ApiProperty({
     description: "PhaseProjectTask Id associated with the transaction",
-    example: 'pt-001',
+    example: "pt-001",
   })
-  @IsString() result_transaction: string;
+  @IsString()
+  result_transaction: string;
   @ApiProperty({
     description: "Date of transaction",
-    example: '2026-01-02',
+    example: "2026-01-02",
   })
-  @IsDateString() transaction_date: Date;
+  @IsDateString()
+  transaction_date: Date;
   @ApiProperty({
     description: "Type transaction",
-    example: 'add_contribution_phase',
-    enum: ['add_contribution_phase','create_project','update_project','update_user'],
+    example: "add_contribution_phase",
+    enum: [
+      "add_contribution_phase",
+      "create_project",
+      "update_project",
+      "update_user",
+    ],
   })
-  @IsDateString() transaction_type: TransactionTypes;
+  @IsDateString()
+  transaction_type: TransactionTypes;
   @ApiProperty({
     description: "Id Phase Project receive contribution",
-    example: 'pp-001',
+    example: "pp-001",
   })
-  @IsString() id_phase_project?: string;
-    @ApiProperty({
+  @IsString()
+  id_phase_project?: string;
+  @ApiProperty({
     description: "Id Phase ProjectTask receive contribution",
-    example: 'ppt-001',
+    example: "ppt-001",
   })
-  @IsString() id_phase_project_task?: string;
+  @IsString()
+  id_phase_project_task?: string;
   @ApiProperty({
     description: "Comment associated with the transaction",
-    example: '',
+    example: "",
   })
-  @IsString() comment: string;
- 
+  @IsString()
+  comment: string;
 }

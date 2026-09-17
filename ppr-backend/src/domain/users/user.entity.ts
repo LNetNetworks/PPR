@@ -1,4 +1,4 @@
-import { UserRole } from './user-role.enum';
+import { UserRole } from "./user-role.enum";
 export class User {
   constructor(
     public readonly id_user: string,
@@ -11,14 +11,13 @@ export class User {
     public address_country: string,
     public user_email: string,
     public phone_mobile: string,
-    public active:boolean,
+    public active: boolean,
     public birthday: Date,
     public role: UserRole = UserRole.USER,
-    public address_seed_token?:string,
-    public wallet_address_token?:string,
+    public address_seed_token?: string,
+    public wallet_address_token?: string,
     public did_user?: string,
     public keycloak_sub?: string,
-    public apikeypok?: string, 
+    public apikeypok?: string,
   ) {}
 }
-

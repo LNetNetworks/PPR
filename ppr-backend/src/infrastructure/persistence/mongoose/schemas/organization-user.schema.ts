@@ -1,8 +1,8 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { Organization } from './organization.schema';
-import { User } from './user.schema'; 
-import { UserRole } from '../../../../domain/users/user-role.enum';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
+import { Organization } from "./organization.schema";
+import { User } from "./user.schema";
+import { UserRole } from "../../../../domain/users/user-role.enum";
 
 @Schema({ timestamps: true })
 export class OrganizationUser extends Document {
@@ -23,6 +23,6 @@ export class OrganizationUser extends Document {
 
   @Prop({ enum: Object.values(UserRole), default: UserRole.USER })
   role: UserRole;
-  
 }
-export const OrganizationUserSchema = SchemaFactory.createForClass(OrganizationUser);
+export const OrganizationUserSchema =
+  SchemaFactory.createForClass(OrganizationUser);

@@ -1,6 +1,6 @@
 export enum ProjectStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'inprogress',
-  CLOSED = 'closed',
-  CANCELED = 'canceled',
+  PENDING = "pending",
+  IN_PROGRESS = "inprogress",
+  CLOSED = "closed",
+  CANCELED = "canceled",
 }

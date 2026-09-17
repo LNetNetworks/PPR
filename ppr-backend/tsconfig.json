@@ -13,14 +13,19 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
+    // DTO and schema properties are assigned at runtime by class-transformer and
+    // Mongoose, not by a constructor. Explicit since TS 6.0 defaults `strict` to true.
+    "strictPropertyInitialization": false,
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
+    // Global type packages, listed explicitly: TS 6.0 no longer injects every
+    // installed @types/* package, only the ones an import already reaches.
+    "types": ["node", "jest"],
   }
 }

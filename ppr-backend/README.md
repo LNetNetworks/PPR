@@ -1,330 +1,118 @@
-# PPR Backend
+# PPR Backend Synopsis
 
-A robust NestJS backend API for the PPR (Programa de Participación Regional) platform, enabling project funding management, evidence tracking, and blockchain integration for transparency.
+PPR Backend is a production-oriented NestJS API that orchestrates project financing, contributions, evidence handling, and blockchain anchoring for the Pago por Resultado (Pay for Result) platform. It follows clean architecture principles with a clear separation between domain entities, application use cases, and infrastructure concerns (HTTP, persistence, auth, integrations). Every controller is wired into a global Keycloak guard stack, Swagger documentation, and a transaction audit trail that persists every meaningful mutation.
 
-## Tech Stack
+## Technology Landscape
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **NestJS** | 11.x | Core framework |
-| **MongoDB** | 8.x | Database (via Mongoose) |
-| **Keycloak** | 26.x | Authentication & authorization |
-| **ethers.js** | 6.x | Blockchain integration |
-| **Swagger** | 11.x | API documentation |
-| **TypeScript** | 5.x | Language |
+| Layer | Technology | Role |
+|-------|------------|------|
+| Framework | **NestJS 11.x** | Structured modular server with pipes, guards, interceptors, and dependency injection. |
+| Language | **TypeScript 5.x** | Strict typing for domain models and DTOs. |
+| Database | **MongoDB 8.x via Mongoose** | Schemas, repositories, and sequence service for deterministic identifiers. |
+| Auth | **Keycloak 26.x** (via `nest-keycloak-connect`) | OAuth2/OIDC with guards for authentication, resources, and roles. |
+| API Docs | **Swagger (OpenAPI) 11.x** | Auto-generated REST contract accessible under `/docs`. |
+| Blockchain | **ethers.js 6.x + custom integrations** | Anchoring evidence/transactions on LACChain, supporting relayed txs via a trusted forwarder. |
+| Integrations | **Pok API, file storage, Keycloak syncing services** | External services for evidence verification, file storage tiers, and user provisioning. |
+| Observability | **Prometheus client (`@willsoto/nestjs-prometheus`)** | Metrics instrumentation exposed automatically for scraper ingestion. |
 
-## Architecture
+## Blockchain & Integration Highlights
 
-The project follows **Clean Architecture** principles with three main layers:
+- **LACChain network**: The stack expects an RPC URL and private key that are used by the `@lacchain/gas-model-provider` and `ethers.js` flows. Transactions reference a deployed smart contract (`ADDRESS_CONTRACT`), and gas sponsorship is supported via a configured forwarder and gas expiration window.
+- **Keycloak Sync**: Endpoints like `POST /users/sync` accept bearer tokens, sync local records, and register roles/organizations automatically by querying Keycloak data and writing to MongoDB.
+- **Evidence Anchoring**: Evidence upload routes persist metadata to MongoDB and, when configured, anchor proofs on-chain while storing files through the configured file storage service (`FILE_STORE_API_URL`).
+- **POK API**: Additional third-party service integration that requires `POK_API_URL` and `POK_APIKEY` for ledger operations.
 
-```
-src/
-├── application/     # Use cases and DTOs (business logic)
-├── domain/          # Entities, repositories interfaces, enums
-├── infrastructure/  # External concerns (HTTP, DB, auth, integrations)
-└── bootstrap/       # App initialization and configuration
-```
+## Required Environment Variables
 
-### Domain Modules
+Before starting the application you must register the following environment variables (for example in a `.env` file loaded by `@nestjs/config`):
 
-| Module | Description |
-|--------|-------------|
-| `projects` | Core project management |
-| `phases` | Project phases/stages |
-| `tasks` | Phase tasks |
-| `contributions` | Funding contributions |
-| `evidences` | Evidence files and blockchain anchoring |
-| `users` | User management (sponsor, provider, user, verifier) |
-| `organizations` | Organization management |
-| `transactions` | Transaction audit trail |
-| `audit-revisions` | Audit revision tracking |
+| Variable                    | Description                                | Example |
+|----------                   |-------------                               |---------|
+| `NODE_ENV`                  | Runtime environment mode                   | `development` |
+| `PORT`                      | HTTP port (fallback: `3000`)               | `3000` |
+| `GLOBAL_PREFIX`             | API prefix applied to every route          | `ppr` |
+| `CORS_ORIGINS`              | Comma-separated browser origins allowed by CORS. No limit on how many; each entry must be scheme + host (+ optional port), with no trailing slash or path | `https://app.example.com,https://stg-app.example.com,http://localhost:5173` |
+| `MONGODB_URI`               | Connection string to MongoDB               | `mongodb://user:pass@host:27017/ppr` |
+| `MONGODB_DB`                | Database name                              | `ppr` |
+| `KEYCLOAK_AUTH_SERVER_URL`  | Base URL of Keycloak server                | `https://auth.example.com` |
+| `KEYCLOAK_REALM`            | Keycloak realm                             | `ppr-realm`        |
+| `KEYCLOAK_CLIENT_ID`        | Confidential client ID                     | `ppr-api-client` |
+| `KEYCLOAK_SECRET`           | Client secret                              | (opaque secret) |
+| `KEYCLOAK_REALM_PUBLIC_KEY` | Realm RSA public key                       | `MIIBIjANBgkq...` |
+| `KEYCLOAK_LOG_LEVEL`        | Level filters for Keycloak logs             | `warn,debug` |
+| `ZK_KEYCLOAK_TOKEN_URL`     | Keycloak token URL for Zero-Knowledge flows| `https://zk-auth.example.com/protocol/openid-connect/token` |
+| `ZK_PERMISSION_SERVICE_URL` | Prividium permission service that exchanges the Keycloak id_token for a network token. Optional: only the prividium path uses it | `https://permissions.example.com/token` |
+| `ZK_RPC_NODE_URL`           | RPC endpoint for ZK network                | `https://zk-node.example.com` |
+| `ZK_USER_PRIVATE_KEY`       | Wallet private key for ZK user             | `0xabc123...` |
+| `ZK_KEYCLOAK_CLIENT_ID`     | ZK Keycloak client                         | `ppr-zk-client` |
+| `ZK_KEYCLOAK_CLIENT_SECRET` | Secret for ZK client                       | (opaque secret) |
+| `ZK_KEYCLOAK_USERNAME`      | Service account username                   | `batch-sync` |
+| `ZK_KEYCLOAK_PASSWORD`      | Service account password                   | (opaque secret) |
+| `TRUSTED_FORWARDER`         | Gas relayer address. Required: no default  | `0x...` |
+| `RPC_URL`                   | Public RPC URL for blockchain interactions | `https://rpc.lacchain.net` |
+| `BLOCKCHAIN_NETWORK`        | Name of the blockchain network              | `prividium` |
+| `PRIVATE_KEY`               | Wallet used for signing transactions       | `0x0123...` |
+| `GAS_NODE_ADDRESS`    | Optional gas sponsor address                     | `0xfeedface...` |
+| `GAS_EXPIRATION`      | Expiration window in **milliseconds** for sponsored gas. Defaults to `300000` (5 minutes) | `300000` |
+| `ADDRESS_CONTRACT`    | Deployed smart contract address                  | `0xabcdef...` |
+| `ADDRESS_TOKEN`       | Deployed token contract address                  | `0xabcdef...` |
+| `ADDRESS_TOKEN_USDC`  | USDC token contract address used in payouts     | `0xC5D7fd2c54D86531306d23Eab91e706E4121E542` |
+| `ADDRESS_GAS_PRIVIDIUM` | Prividium native gas token contract address    | `0x000000000000000000000000000000000000800A` |
+| `GSPONSOR_SEED`       | BIP-39 mnemonic the in-app signer derives every project and sponsor wallet from. Validated at startup, checksum included | (12- or 24-word mnemonic) |
+| `GSPONSOR_TRANSFER_CONTRACT` | Contract used for sponsored transfers     | `0xabcdef...` |
+| `WALLET_DERIVATION_NAMESPACE` | Namespace used to derive project wallets by environment | `dev` |
+| `FILE_STORE_API_URL`  | Endpoint for file storage service                | `https://filestore.example.com/api` |
+| `FILE_STORE_API_KEY`  | API key for file storage                         | (opaque key) |
+| `POK_API_URL`         | Endpoint for POK integration                     | `https://pok.example.com/api` |
+| `POK_APIKEY`          | High-privilege API key                           | (opaque key) |
+| `BRIDGE_API_URL`      | Endpoint for the bridge integration              | `https://bridge.example.com/api` |
+| `BRIDGE_API_KEY`      | API key for the bridge integration               | (opaque key) |
+| `BRIDGE_TIMEOUT_MS`   | Bridge request timeout in milliseconds. Optional: defaults to `60000` | `60000` |
+| `RESEND_API_KEY`      | API key for the Resend mail provider             | (opaque key) |
+| `MAIL_FROM`           | Sender address used on outgoing mail             | `noreply@example.com` |
+| `NEST_LOG_LEVEL`      | Comma-separated Nest log levels                  | `log,error,warn` |
+| `METRICS_TOKEN`       | Token used to secure Prometheus metrics          | (16+ characters) |
 
-### Integrations
+Variables in bold must be present for secure authentication and blockchain anchoring to work correctly. `GAS_NODE_ADDRESS` and `ZK_PERMISSION_SERVICE_URL` default to an empty value when not set; `GAS_EXPIRATION` defaults to `300000` milliseconds, the five-minute window applied before it became configurable.
 
-| Integration | Purpose |
-|-------------|---------|
-| **POK API** | External service integration |
-| **Blockchain (LACChain)** | Transaction anchoring and verification |
-| **File Storage (GCS)** | Evidence file storage |
+## Project Wallet Seeding
 
-## Prerequisites
+The wallet derivation namespace must be set to a short environment value, not to a full command. Each namespace maps to a fixed numeric derivation index:
 
-- **Node.js** 22.x (see Dockerfile)
-- **MongoDB** instance (local or remote)
-- **Keycloak** server configured with `ppr-realm`
-- Access to LACChain network (optional, for blockchain features)
+| Namespace | Derivation index |
+|-----------|------------------|
+| `local`   | `1` |
+| `dev`     | `1` |
+| `stage`   | `2` |
+| `prod`    | `3` |
 
-## Quick Start
+Use one of the supported values below and run the matching seed command separately. In Docker/Kubernetes runtime images, `yarn seed:project-wallets` executes the compiled script from `dist/`; `yarn seed:project-wallets:local` is only for local development with `ts-node`.
 
-### 1. Install dependencies
+| Environment | `WALLET_DERIVATION_NAMESPACE` | Seed command |
+|-------------|-------------------------------|--------------|
+| Local       | `local`                       | `yarn seed:project-wallets:local` |
+| Dev         | `dev`                         | `WALLET_DERIVATION_NAMESPACE=dev yarn seed:project-wallets` |
+| Stage       | `stage`                       | `WALLET_DERIVATION_NAMESPACE=stage yarn seed:project-wallets` |
+| Prod        | `prod`                        | `WALLET_DERIVATION_NAMESPACE=prod yarn seed:project-wallets` |
+
+Run the seeding command once per environment after deployment or after restoring a database so the `project_wallets` counter matches the highest historical wallet index already stored in `projects`.
+
+## Running the Application
 
 ```bash
 npm install
-```
-
-### 2. Configure environment
-
-Copy `.env.example` to `.env` and configure:
-
-```env
-# Server
-NODE_ENV="development"
-PORT="3000"
-GLOBAL_PREFIX="ppr"
-
-# MongoDB
-MONGODB_URI="mongodb://user:pass@localhost:27017/ppr_db"
-MONGODB_DB="ppr_db"
-
-# Keycloak
-KEYCLOAK_AUTH_SERVER_URL="https://your-keycloak.example.com"
-KEYCLOAK_REALM="ppr-realm"
-KEYCLOAK_CLIENT_ID="ppr-api-client"
-KEYCLOAK_REALM_PUBLIC_KEY="<your-public-key>"
-
-# External Services
-FILE_STORE_API_URL="<file-storage-api-url>"
-FILE_STORE_API_KEY="<your-api-key>"
-
-# Blockchain (optional)
-RPC_URL="<lacchain-rpc-url>"
-PRIVATE_KEY="<blockchain-private-key>"
-ADDRESS_CONTRACT="<smart-contract-address>"
-```
-
-### 3. Run the application
-
-```bash
-# Development (with hot reload)
 npm run start:dev
-
-# Production
-npm run build
-npm run start:prod
 ```
 
-### 4. Access the API
+The default base URL becomes `http://localhost:3000/${GLOBAL_PREFIX}` (e.g., `http://localhost:3000/ppr`). Swagger documentation is available at `/docs` and the health endpoint lives under `/health`.
 
-- **API Base URL**: `http://localhost:3000/ppr`
-- **Swagger Docs**: `http://localhost:3000/ppr/docs`
-- **Health Check**: `http://localhost:3000/ppr/health`
+## Production Notes
 
-## API Endpoints
+- **Docker**: Build with `docker build -t ppr-backend .` and run `docker run -p 3000:3000 --env-file .env ppr-backend`.
+- **CORS**: Configured to allow the registered front-end domains; update `main.ts` when new origins are needed.
+- **Observability**: Metrics exported under `/metrics` via `prom-client` and logged using Nest’s logger plus Keycloak debug levels.
+- **Audit Trail**: Every route that mutates data attaches a transaction type to `Request` (see `TransactionAuditInterceptor`) so operations are stored in the `transactions` collection with deterministic IDs.
 
-### Projects
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/projects` | List all projects |
-| `GET` | `/projects/:id` | Get project by ID |
-| `POST` | `/projects` | Create new project |
-| `PUT` | `/projects/:id` | Update project |
-| `GET` | `/projects/:projectId/phases` | List project phases |
-| `POST` | `/projects/:projectId/phases` | Add phase to project |
-| `GET` | `/projects/:projectId/members` | List project members |
-| `GET` | `/projects/:projectId/contributions` | List contributions |
+## Summary
 
-### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/users` | List users |
-| `GET` | `/users/:id` | Get user by ID |
-| `POST` | `/users` | Create user |
-
-### Evidences
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/evidences` | List evidences |
-| `POST` | `/evidences` | Upload evidence |
-
-> **Note**: All endpoints require Bearer token authentication via Keycloak.
-
-## Docker
-
-### Build and run
-
-```bash
-# Build image
-docker build -t ppr-backend .
-
-# Run container
-docker run -p 3000:3000 --env-file .env ppr-backend
-```
-
-### Using docker-compose
-
-```bash
-docker-compose up -d
-```
-
-## Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run start:dev` | Start with hot reload |
-| `npm run start:debug` | Start with debugger |
-| `npm run build` | Build for production |
-| `npm run start:prod` | Run production build |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format with Prettier |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run e2e tests |
-| `npm run test:cov` | Run tests with coverage |
-
-## User Roles
-
-| Role | Description |
-|------|-------------|
-| **Sponsor** | Creates and funds projects |
-| **Provider** | Delivers project services, uploads evidence |
-| **User** | Benefits from projects |
-| **Verifier** | Audits evidence and project progress |
-
-## Keycloak Setup
-
-The application requires a properly configured Keycloak server for authentication. Below is the required setup.
-
-### Realm Configuration
-
-1. **Create a new realm** named `ppr-realm`
-2. Configure the realm settings:
-   - Enable user registration if needed
-   - Set session timeouts as required
-
-### Client Configuration
-
-Create a client for the backend API:
-
-| Setting | Value |
-|---------|-------|
-| **Client ID** | `ppr-api-client` |
-| **Client Protocol** | `openid-connect` |
-| **Access Type** | `confidential` |
-| **Standard Flow Enabled** | `ON` |
-| **Direct Access Grants** | `ON` |
-| **Service Accounts** | `ON` (if using machine-to-machine auth) |
-
-### Valid Redirect URIs
-
-```
-http://localhost:3000/*
-https://your-production-domain.com/*
-```
-
-### Roles
-
-Create the following realm roles:
-
-| Role | Description |
-|------|-------------|
-| `sponsor` | Can create and fund projects |
-| `provider` | Can deliver services and upload evidence |
-| `user` | Can view and participate in projects |
-| `verifier` | Can audit evidence and approve phases |
-
-### Obtaining the Realm Public Key
-
-1. Go to **Realm Settings** → **Keys**
-2. Click on the **Public key** button for the RSA key
-3. Copy the key and add it to your `.env`:
-
-```env
-KEYCLOAK_REALM_PUBLIC_KEY="MIIBIjANBgkq..."
-```
-
-### Environment Variables
-
-```env
-KEYCLOAK_AUTH_SERVER_URL="https://your-keycloak.example.com"
-KEYCLOAK_REALM="ppr-realm"
-KEYCLOAK_CLIENT_ID="ppr-api-client"
-KEYCLOAK_SECRET="<your-client-secret>"
-KEYCLOAK_REALM_PUBLIC_KEY="<your-realm-public-key>"
-```
-
-> **Note**: The backend uses `nest-keycloak-connect` for JWT validation. All API endpoints (except `/health`) require a valid Bearer token.
-
----
-
-# Recommended Fixes & Improvements
-
-## 🔴 Critical
-
-### 1. Security: Remove Hardcoded Secrets from `.env`
-**Issue**: The `.env` file contains real credentials and private keys committed to version control.
-
-**Fix**:
-- Remove `.env` from git tracking: `git rm --cached .env`
-- Add `.env` to `.gitignore`
-- Create `.env.example` with placeholder values
-- Use secrets management (e.g., HashiCorp Vault, AWS Secrets Manager)
-
-### 2. CORS Configuration Hardcoded
-**Issue**: CORS origins are hardcoded in `main.ts`.
-
-**Fix**:
-```typescript
-// Move to environment variables
-const allowedOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
-app.enableCors({ origin: allowedOrigins, ... });
-```
-
-### 3. Missing Input Validation on Some Endpoints
-**Issue**: Some controller methods lack proper DTO validation.
-
-**Fix**: Ensure all endpoints use DTOs with class-validator decorators.
-
-## 🟡 Moderate
-
-### 4. Duplicate CORS Handling
-**Issue**: CORS is configured both manually (preflight middleware) and via `enableCors()`.
-
-**Fix**: Remove the manual OPTIONS handler and rely on NestJS's built-in CORS.
-
-```typescript
-// Remove this block from main.ts (lines 15-24)
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') { ... }
-});
-```
-
-### 5. Add Consistent Error Response DTOs
-**Issue**: Error responses vary across endpoints.
-
-**Fix**: Implement a global exception filter with standardized error format.
-
-### 6. Repository Pattern Inconsistency
-**Issue**: Some use cases directly access repositories, others go through services.
-
-**Fix**: Establish and enforce consistent data access patterns.
-
-### 7. Add Request Logging Middleware
-**Fix**: Add structured logging for all requests/responses for debugging and monitoring.
-
-### 8. Missing Unit Tests
-**Issue**: Limited test coverage visible.
-
-**Fix**: Add unit tests for use cases and integration tests for controllers.
-
-## 🟢 Nice to Have
-
-### 9. Add Rate Limiting
-**Fix**: Implement `@nestjs/throttler` for API rate limiting.
-
-### 10. Implement API Versioning
-**Fix**: Add version prefix (e.g., `/v1/projects`) for future compatibility.
-
-### 11. Add Database Migrations
-**Issue**: No migration strategy for MongoDB schema changes.
-
-**Fix**: Consider using `migrate-mongo` for schema migrations.
-
-### 12. Improve Swagger Documentation
-**Fix**: Add more detailed descriptions, examples, and response types to Swagger decorators.
-
-### 13. Add Health Check Dependencies
-**Fix**: Extend health check to verify MongoDB, Keycloak, and external service connectivity.
-
-### 14. Centralize Configuration
-**Issue**: Configuration is spread across multiple modules.
-
-**Fix**: Use a single configuration schema with Joi validation.
+PPR Backend is a secure, modular NestJS API that hinges on Keycloak-authenticated REST endpoints, MongoDB persistence, and optional blockchain anchoring through ethers/LACChain. Configure the required environment variables first, then start the NestJS process to unlock project, user, evidence, contribution, and transaction workflows that feed both the application database and the blockchain audit trail.

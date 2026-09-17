@@ -1,96 +1,71 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { SyncJob, SyncJobDocument } from '../schemas/sync-job.schema';
-import { SyncTask, SyncTaskDocument, SyncTaskStatus } from '../schemas/sync-task.schema';
-import { randomUUID } from 'crypto';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { SyncJob, SyncJobDocument } from "../schemas/sync-job.schema";
+import {
+  SyncTask,
+  SyncTaskDocument,
+  SyncTaskStatus,
+} from "../schemas/sync-task.schema";
+import { randomUUID } from "crypto";
 
 @Injectable()
 export class SyncQueueMongooseRepository {
   private readonly attempts: number;
 
   constructor(
-    @InjectModel(SyncJob.name) private readonly jobModel: Model<SyncJobDocument>,
-    @InjectModel(SyncTask.name) private readonly taskModel: Model<SyncTaskDocument>,
-
+    @InjectModel(SyncJob.name)
+    private readonly jobModel: Model<SyncJobDocument>,
+    @InjectModel(SyncTask.name)
+    private readonly taskModel: Model<SyncTaskDocument>,
   ) {
     this.attempts = 3;
   }
 
-  async createJob(input: {requestedBy: string, type:string, total: number }) {
+  async createJob(input: { requestedBy: string; type: string; total: number }) {
     const jobId = `job_${randomUUID()}`;
     await this.jobModel.create({
       jobId,
       requestedBy: input.requestedBy,
       type: input.type,
-      status: 'PENDING',
+      status: "PENDING",
       progress: { total: input.total, processed: 0, ok: 0, failed: 0 },
     });
     return { jobId };
   }
 
-/*   input: {
+  async bulkCreateTasks(input: {
     jobId: string;
     type: string;
-    tasks: Array<{ dedupeKey: string; payload: Record<string, any> }>;
-  } */
+    tasks: Array<{ dedupeKey: string; payload: any }>;
+  }): Promise<{ inserted: number }> {
+    if (!input.tasks?.length) return { inserted: 0 };
 
-
-/*   async bulkCreateTasks(input:{jobId: string, type: string, payloads: SyncTask['payload'][]}) {
-    if (!input.payloads.length) return 0;
-
-    const docs = input.payloads.map((payload) => ({
-      jobId:input.jobId,
-      type:input.type,
-      status: 'PENDING' as SyncTaskStatus,
+    const docs = input.tasks.map((t) => ({
+      jobId: input.jobId,
+      type: input.type,
+      status: "PENDING" as SyncTaskStatus,
       attempts: 0,
       nextRunAt: new Date(),
-      payload,
+      dedupeKey: t.dedupeKey,
+      payload: t.payload,
     }));
 
-    // ordered:false => inserta lo que puede aunque existan duplicados por unique index
     try {
       const res = await this.taskModel.insertMany(docs, { ordered: false });
-      return res.length;
+      return { inserted: res.length };
     } catch (e: any) {
-      // Si hay duplicados, insertMany puede tirar error; igual suele insertar los no duplicados.
-      // Para simplificar: devolvemos 0/unknown. Si querés, parseás e.result.
-      return 0;
+      console.error(JSON.stringify(e));
+      return { inserted: 0 };
     }
-  } */
-
-async bulkCreateTasks(input: {
-  jobId: string;
-  type: string;
-  tasks: Array<{ dedupeKey: string; payload: any }>;
-}): Promise<{ inserted: number }> {
-
-  if (!input.tasks?.length) return { inserted: 0 };
-
-  const docs = input.tasks.map((t) => ({
-    jobId: input.jobId,
-    type: input.type,
-    status: 'PENDING' as SyncTaskStatus,
-    attempts: 0,
-    nextRunAt: new Date(),
-    dedupeKey: t.dedupeKey,   
-    payload: t.payload, 
-  }));
-
-  try {
-    const res = await this.taskModel.insertMany(docs, { ordered: false });
-    return { inserted: res.length };
-  } catch (e: any) {
-
-    console.log(JSON.stringify(e));
-    console.log('insertMany error code:', e?.code);
-    console.log('insertMany error message:', e?.message);
-    return { inserted: 0 };
   }
-}
 
-
-  async lockNextBatch(input: {type:string, limit: number, workerId: string, lockSeconds: number}) {
+  async lockNextBatch(input: {
+    type: string;
+    limit: number;
+    workerId: string;
+    lockSeconds: number;
+  }) {
     const now = new Date();
     const lockExpiresAt = new Date(now.getTime() + input.lockSeconds * 1000);
 
@@ -98,15 +73,22 @@ async bulkCreateTasks(input: {
 
     for (let i = 0; i < input.limit; i++) {
       const doc = await this.taskModel.findOneAndUpdate(
-        { type: input.type,
-          status: { $in: ['PENDING', 'RETRY'] },
+        {
+          type: input.type,
+          status: { $in: ["PENDING", "RETRY"] },
           nextRunAt: { $lte: now },
           attempts: { $lt: this.attempts },
-          $or: [{ lockedBy: { $exists: false } },{ lockedBy: null },{ lockExpiresAt: { $exists: false } },{ lockExpiresAt: null }, { lockExpiresAt: { $lte: now } }],
+          $or: [
+            { lockedBy: { $exists: false } },
+            { lockedBy: null },
+            { lockExpiresAt: { $exists: false } },
+            { lockExpiresAt: null },
+            { lockExpiresAt: { $lte: now } },
+          ],
         },
         {
           $set: {
-            status: 'RUNNING',
+            status: "RUNNING",
             lockedBy: input.workerId,
             lockExpiresAt,
           },
@@ -118,54 +100,60 @@ async bulkCreateTasks(input: {
       locked.push(doc);
     }
 
-    //return locked;
-     return locked.map((d) => ({
-    id: String(d._id),
-    jobId: d.jobId,
-    type: d.type,
-    status: d.status,
-    attempts: d.attempts,
-    payload: d.payload,
-  }));
+    return locked.map((d) => ({
+      id: String(d._id),
+      jobId: d.jobId,
+      type: d.type,
+      status: d.status,
+      attempts: d.attempts,
+      payload: d.payload,
+    }));
   }
 
-  async markDone(input: {taskId: string, workerId: string, result?: SyncTask['result']}) {
+  async markDone(input: {
+    taskId: string;
+    workerId: string;
+    result?: SyncTask["result"];
+  }) {
     await this.taskModel.updateOne(
       { _id: input.taskId, lockedBy: input.workerId },
-      { $set: { status: 'DONE', result:input.result }, $unset: { lockedBy: 1, lockExpiresAt: 1 } },
+      {
+        $set: { status: "DONE", result: input.result },
+        $unset: { lockedBy: 1, lockExpiresAt: 1 },
+      },
     );
   }
 
-  async markRetryOrFail(input:{ taskId: string, workerId: string, error: string}): Promise<'RETRY'|'FAILED'|undefined> {
-    console.log('start - markRetryOrFail');
-    const task = await this.taskModel.findOne({ _id: input.taskId, lockedBy: input.workerId });
+  async markRetryOrFail(input: {
+    taskId: string;
+    workerId: string;
+    error: string;
+  }): Promise<"RETRY" | "FAILED" | undefined> {
+    const task = await this.taskModel.findOne({
+      _id: input.taskId,
+      lockedBy: input.workerId,
+    });
 
     if (!task) return;
 
     const attempts = (task.attempts ?? 0) + 1;
-  
-    // backoff simple
-    const delayMs =
-      attempts === 1 ? 30_000 :
-      attempts === 2 ? 2 * 60_000 :
-      0;
+    const delayMs = attempts === 1 ? 30_000 : attempts === 2 ? 2 * 60_000 : 0;
     if (attempts >= this.attempts) {
-
       await this.taskModel.updateOne(
         { _id: input.taskId, lockedBy: input.workerId },
         {
-          $set: { status: 'FAILED', attempts, lastError: input.error },
+          $set: { status: "FAILED", attempts, lastError: input.error },
           $unset: { lockedBy: 1, lockExpiresAt: 1 },
         },
       );
-      return 'FAILED';
+      return "FAILED";
     }
 
-    const result = await this.taskModel.updateOne(
+    await this.taskModel.updateOne(
       { _id: input.taskId, lockedBy: input.workerId },
       {
         $set: {
-          status: 'RETRY',
+          status: "RETRY",
           attempts,
           lastError: input.error,
           nextRunAt: new Date(Date.now() + delayMs),
@@ -173,19 +161,24 @@ async bulkCreateTasks(input: {
         $unset: { lockedBy: 1, lockExpiresAt: 1 },
       },
     );
-    return 'RETRY';
+    return "RETRY";
   }
 
-  async bumpJobProgress(input: {jobId: string, processed: number; ok: number; failed: number }) {
+  async bumpJobProgress(input: {
+    jobId: string;
+    processed: number;
+    ok: number;
+    failed: number;
+  }) {
     await this.jobModel.updateOne(
-      { jobId:input.jobId },
+      { jobId: input.jobId },
       {
         $inc: {
-          'progress.processed': input.processed,
-          'progress.ok': input.ok,
-          'progress.failed': input.failed,
+          "progress.processed": input.processed,
+          "progress.ok": input.ok,
+          "progress.failed": input.failed,
         },
-        $set: { status: 'RUNNING' },
+        $set: { status: "RUNNING" },
       },
     );
   }
@@ -196,19 +189,19 @@ async bulkCreateTasks(input: {
 
     const remaining = await this.taskModel.countDocuments({
       jobId: input.jobId,
-      status: { $in: ['PENDING', 'RETRY', 'RUNNING'] },
+      status: { $in: ["PENDING", "RETRY", "RUNNING"] },
     });
 
     if (remaining !== 0) return;
 
     const failedTasks = await this.taskModel.countDocuments({
       jobId: input.jobId,
-      status: 'FAILED',
+      status: "FAILED",
     });
 
     await this.jobModel.updateOne(
       { jobId: input.jobId },
-      { $set: { status: failedTasks > 0 ? 'FAILED' : 'DONE' } },
+      { $set: { status: failedTasks > 0 ? "FAILED" : "DONE" } },
     );
   }
 

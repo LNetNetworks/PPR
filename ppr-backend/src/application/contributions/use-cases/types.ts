@@ -4,6 +4,5 @@ export interface CreateContributionInput {
   deposit_amount: number;
   id_phase_project: string;
   date_contribution: Date;
-  uid?:string;
+  uid?: string;
 }
-

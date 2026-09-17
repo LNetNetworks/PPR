@@ -1,8 +1,12 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { PhaseProjectTaskRepository } from '../../../domain/phases/phase-project-task.repository';
-import { PhaseProjectRepository } from '../../../domain/phases/phase-project.repository';
-import { TaskRepository } from '../../../domain/tasks/task.repository';
-import { ProjectRepository } from '../../../domain/projects/project.repository';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
+import { PhaseProjectTaskRepository } from "../../../domain/phases/phase-project-task.repository";
+import { PhaseProjectRepository } from "../../../domain/phases/phase-project.repository";
+import { TaskRepository } from "../../../domain/tasks/task.repository";
+import { ProjectRepository } from "../../../domain/projects/project.repository";
 
 export interface PhaseProjectTaskWithDetails {
   id_phase_project_task: string;
@@ -29,16 +33,16 @@ export class GetPhaseProjectTasksUseCase {
     phaseProjectId: string,
     params?: { limit?: number; offset?: number },
   ): Promise<PhaseProjectTaskWithDetails[]> {
-    // Verify project exists
     const project = await this.repoProject.findById(projectId);
     if (!project) {
       throw new NotFoundException(`Project with id: "${projectId}" not found`);
     }
 
-    // Verify phaseProject exists and belongs to the project
     const phaseProject = await this.repoPhaseProject.findById(phaseProjectId);
     if (!phaseProject) {
-      throw new NotFoundException(`Phase Project with id: "${phaseProjectId}" not found`);
+      throw new NotFoundException(
+        `Phase Project with id: "${phaseProjectId}" not found`,
+      );
     }
 
     if (phaseProject.id_project !== projectId) {
@@ -47,13 +51,12 @@ export class GetPhaseProjectTasksUseCase {
       );
     }
 
-    // Find all tasks for this phase project
-    const phaseProjectTasks = await this.repoPhaseProjectTask.findByPhaseProjectId(
-      phaseProjectId,
-      params,
-    );
+    const phaseProjectTasks =
+      await this.repoPhaseProjectTask.findByPhaseProjectId(
+        phaseProjectId,
+        params,
+      );
 
-    
     const tasksWithDetails: PhaseProjectTaskWithDetails[] = await Promise.all(
       phaseProjectTasks.map(async (phaseProjectTask) => {
         const task = await this.repoTask.findById(phaseProjectTask.id_task);
@@ -75,4 +78,3 @@ export class GetPhaseProjectTasksUseCase {
     return tasksWithDetails;
   }
 }
-

@@ -1,23 +1,23 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document,Types } from 'mongoose';
-import { Project } from './project.schema';
-import { User } from './user.schema';
-import { PhaseProjectTask } from './phase-project-task.schema';
-import { PhaseProject } from './phase-project.schema';
-import { TransactionTypes} from '../../../../domain/transactions/transaction-types.enum';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
+import { Project } from "./project.schema";
+import { User } from "./user.schema";
+import { PhaseProjectTask } from "./phase-project-task.schema";
+import { PhaseProject } from "./phase-project.schema";
+import { TransactionTypes } from "../../../../domain/transactions/transaction-types.enum";
 
 @Schema({ timestamps: true })
 export class Transaction extends Document {
   @Prop({ required: true, unique: true, index: true })
   id_transaction: string;
 
-  @Prop({ required: true})
+  @Prop({ required: true })
   id_project: string;
 
   @Prop({ type: Types.ObjectId, ref: Project.name })
   project?: Types.ObjectId;
 
-  @Prop({ required: true})
+  @Prop({ required: true })
   id_user: string;
 
   @Prop({ type: Types.ObjectId, ref: User.name })
@@ -31,7 +31,7 @@ export class Transaction extends Document {
 
   @Prop({ required: true })
   transaction_type: TransactionTypes;
-  
+
   @Prop()
   id_phase_project: string;
 
@@ -44,12 +44,7 @@ export class Transaction extends Document {
   @Prop({ type: Types.ObjectId, ref: PhaseProjectTask.name })
   phase_project_task?: Types.ObjectId;
 
-
   @Prop({ required: true })
   comment: string;
-
-
 }
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
-
-

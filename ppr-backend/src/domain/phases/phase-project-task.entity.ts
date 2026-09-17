@@ -1,6 +1,6 @@
-import { PhaseProjectTaskStatus } from './phase-project-task-status.enum';
+import { PhaseProjectTaskStatus } from "./phase-project-task-status.enum";
 
-export class PhaseProjectTask{
+export class PhaseProjectTask {
   constructor(
     public readonly id_phase_project_task: string,
     public id_phase_project: string,

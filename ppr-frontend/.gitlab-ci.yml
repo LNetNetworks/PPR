@@ -1,8 +1,0 @@
-# Pipeline configuration - includes centralized template
-# Template: frontend-cloudrun.yml
-# Source: https://gitlab.com/lacnet/gitlab-pipelines
-
-include:
-  - project: 'lacnet/gitlab-pipelines'
-    file: '/templates/frontend-cloudrun.yml'
-    ref: 'main'

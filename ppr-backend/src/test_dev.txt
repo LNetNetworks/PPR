@@ -1,4 +1,0 @@
-Test file for GitLab development testing
-Version: 1.0
-Updated: test_development branch
-

@@ -1,8 +1,0 @@
-# Pipeline configuration - includes centralized template
-# Template: backend-docker-argocd.yml
-# Source: https://gitlab.com/lacnet/gitlab-pipelines
-
-include:
-  - project: 'lacnet/gitlab-pipelines'
-    file: '/templates/backend-docker-argocd.yml'
-    ref: 'main'
